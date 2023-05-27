@@ -1,2 +1,5 @@
 .vscode
 *.rest
+**/cookie
+*/cookie
+美团数据/cookie

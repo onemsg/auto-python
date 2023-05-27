@@ -1,5 +1,5 @@
 """
-采集美团上北京-星巴克店铺数据
+采集美团-北京店铺数据
 
 代码具有通用性, 更换 q 参数即可采集其他的店铺数据,比如 q="奶茶"
 
@@ -23,51 +23,32 @@ def load_cookie() -> str:
         return f.read()
 
 SEARCH_API = "https://apimobile.meituan.com/group/v4/poi/pcsearch/1"
-SEARCH_PARAMS = {
-    "limit": 32,
-    "offset": 0,
-    "cateId": -1,
-    "q": "星巴克",
-    "sort": "default"
-}
-
-# TODO: 使用您自己浏览器里的 Cookies
-COOKIES = load_cookie()
 
 HEADERS = {
     "Host": "apimobile.meituan.com",
     "Origin": "https://bj.meituan.com",
     "Referer": "https://bj.meituan.com/",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Cookie": COOKIES,
+    "Cookie": load_cookie(), # 使用您自己浏览器里的 Cookies
 }
 
-def build_params(offset=0, limit=50, q="星巴克") -> Dict:
+def build_params(q, offset=0, limit=32) -> Dict:
     """
     构建请求参数
     """
-    params = SEARCH_PARAMS.copy()
-    params.update(offset=offset, limit=limit, q=q)
-    return params
+    return {
+        "offset": offset,
+        "limit": limit,
+        "q": q,
+        "cateId": -1,
+        "sort": "rating"
+    }
 
-def get_count(q="星巴克") -> int:
+def get_data(q, offset, limit) -> List[Dict]:
     """
-    获取店铺数量
+    获取指定数量的店铺列表
     """
-    params = build_params(0, 5, q=q)
-    res = requests.get(SEARCH_API, params, headers=HEADERS)
-    try:
-        res.raise_for_status()
-    except requests.HTTPError as e:
-        logging.warning("Get %s failed", res.url, exc_info=e)
-        return 0
-    return res.json()['data']['totalCount']
-
-def get_data(offset, limit, q="星巴克") -> List[Dict]:
-    """
-    获取店铺列表
-    """
-    params = build_params(offset, limit, q=q)
+    params = build_params(q, offset, limit)
     res = requests.get(SEARCH_API, params, headers=HEADERS)
     try:
         res.raise_for_status()
@@ -78,42 +59,62 @@ def get_data(offset, limit, q="星巴克") -> List[Dict]:
     result = []
     for item in search_result:
         result.append({
-            "id": item["id"],
-            "title": item["title"],
-            "avgscore": item["avgscore"],
-            "backCateName": item["backCateName"],
-            "areaname": item["areaname"]
+            "id": item["id"], # id
+            "title": item["title"], # 店铺名
+            "avgscore": item["avgscore"], # 评分评分
+            "backCateName": item["backCateName"], # 店铺类型
+            "areaname": item["areaname"], # 商圈
+            "avgprice": item["avgprice"], # 平均价格
+            "comments": item["comments"], # 评论数量
         })
     return result
 
 
-if __name__ == "__main__":
-    
-    q = "星巴克"    # 查询店铺名称
-    filename = "beijing-starbucks"  # 存储文件名
-
-    count = get_count(q=q)
-    logging.info("查询到%s门店 %s", q, count)
-    limit = 50
+def get_all_data(q) -> List[Dict]:
+    """
+    获取所有店铺列表
+    """
     data = []
-    for offset in range(0, count, limit):
-        _data = get_data(offset, limit,q=q)
+    offset = 0
+    limit = 34
+    while True:
+        _data = get_data(q, offset, limit)
+        if not _data: break
         data.extend(_data)
         logging.info("%s门店 %s - %s 采集完成, 成功 %s", q, offset, offset + limit, len(_data))
+        offset += limit
     logging.info("%s门店采集完成, 总数 %s", q, len(data))
+    return data
 
-    # 存储为 json 格式
-    json_filename = filename + ".json"
+
+def save_to_json(data, filename):
+    """
+    存储到 json 文件
+    """
+    json_filename = os.path.join(os.path.dirname(__file__), filename + ".json")
     with open(json_filename, 'w', encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
         logging.info("数据已写入 %s", json_filename)
 
-    # 存储为 csv 格式
-    csv_filename = filename + ".csv"
+
+def save_to_csv(data, filename):
+    """
+    存储到 csv 文件
+    """ 
+    if not data: return
+    csv_filename = os.path.join(os.path.dirname(__file__), filename + ".csv")
     with open(csv_filename, "w", encoding="utf-8", newline="") as f:
-        header = "id title avgscore areaname backCateName".split()
+        header = data[0].keys()
         writer = csv.DictWriter(f, fieldnames=header, delimiter=",")
         writer.writeheader()
         for _ in data:
             writer.writerow(_)
         logging.info("数据已写入 %s", csv_filename)
+
+
+if __name__ == "__main__":
+    
+    q = "火锅"    # 查询店铺名称
+    filename = "北京-火锅"  # 存储文件名
+    data = get_all_data(q)
+    save_to_csv(data, filename)
