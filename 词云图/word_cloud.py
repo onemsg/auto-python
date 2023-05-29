@@ -40,8 +40,10 @@ with open(build_path("小美人鱼_豆瓣影评.txt") , "r", encoding="utf-8") a
 # 统计词频
 word_counter = process_text(text)
 
+# 词云图所使用的形状
 alice_mask = np.array(Image.open(build_path("alice_mask.png")))
 
+# 需要指定该字体，否则无法生成中文
 wc = WordCloud(font_path=build_path("fonts/SourceHanSerifK-Light.otf"), background_color="white", max_words=2000, mask=alice_mask,
     contour_width=3, contour_color='steelblue')
 
