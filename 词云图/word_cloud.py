@@ -1,5 +1,5 @@
 """
-生成小美人鱼影评词云图
+生成词云图
 """
 from os import path
 from PIL import Image
@@ -31,24 +31,32 @@ def process_text(text: str) -> dict:
     return dict(Counter(words))
 
 
-# 读取文本
-text = ""
-with open(build_path("小美人鱼_豆瓣影评.txt") , "r", encoding="utf-8") as f:
-    text = f.read()
+def read_text(filename: str) -> str:
+    with open(build_path(filename) , "r", encoding="utf-8") as f:
+        return f.read()
 
-# 统计词频
-word_counter = process_text(text)
 
-# 词云图所使用的形状
-alice_mask = np.array(Image.open(build_path("alice_mask.png")))
 
-# font_path - 需要指定 SourceHanSerifK-Light.otf 字体，否则无法生成中文
-wc = WordCloud(font_path=build_path("fonts/SourceHanSerifK-Light.otf"), 
-    background_color="white", max_words=2000, mask=alice_mask,
-    contour_width=3, contour_color='steelblue')
+def generate_wordcloud(text_filename, mask_filename, image_filename):
+    # 读取文本
+    text = read_text(text_filename)
 
-# 生成词云图
-wc.generate_from_frequencies(word_counter)
+    # 统计词频
+    word_counter = process_text(text)
+    mask = np.array(Image.open(build_path(mask_filename))) if mask_filename else None
+    # font_path - 需要指定 SourceHanSerifK-Light.otf 字体，否则无法生成中文
+    wc = WordCloud(font_path=build_path("fonts/SourceHanSerifK-Light.otf"), 
+        background_color="black", max_words=2000, mask=mask,
+        contour_width=3, contour_color='steelblue')
+    # 生成词云图
+    wc.generate_from_frequencies(word_counter)
+    # 保存图片
+    wc.to_file(build_path(image_filename))
 
-# 保存图片
-wc.to_file(build_path("小美人鱼_豆瓣影评_词云图.png"))
+
+if __name__ == "__main__":
+    text_filename = "小美人鱼_豆瓣影评.txt"
+    mask_filename = "alice_mask.png"
+    image_filename = "小美人鱼_豆瓣影评_词云图.png"
+
+    generate_wordcloud(text_filename, mask_filename, image_filename)
