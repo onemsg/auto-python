@@ -13,7 +13,6 @@
 同目录其他文件:
   - cookie - 保存你的 cookie 值
   - citys.json - 城市列表
-
 @Author kvimsg@live.com
 @Since 2023-02
 """
@@ -151,8 +150,8 @@ if __name__ == "__main__":
     更改 q 和 city 参数即可执行
     """
 
-    q = "酒店"    # 查询店铺名称
-    city = "上海" # 城市
+    q = "川菜"    # 查询店铺名称
+    city = "北京" # 城市
 
     filename = f"{city}-{q}"
     city_id = load_city_id(city)
